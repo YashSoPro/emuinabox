@@ -7,7 +7,7 @@ color_text() {
 
 # Decorative header
 color_text 36 "=========================="
-color_text 32 "      Emuinabox Installer  "
+color_text 32 "       EmuInABox Installer    "
 color_text 36 "=========================="
 
 # Clear previous script files
@@ -121,6 +121,11 @@ if [ "$INSTALL_WOW64" = "1" ]; then
 else
     sync-package wine-ge-custom-8-25
 fi
+
+# Create the emuinabox script if it doesn't exist
+echo "#!/bin/bash" > $PREFIX/glibc/opt/scripts/emuinabox
+echo "echo 'EmuInABox is starting...'" >> $PREFIX/glibc/opt/scripts/emuinabox
+chmod +x $PREFIX/glibc/opt/scripts/emuinabox
 
 ln -sf $PREFIX/glibc/opt/scripts/emuinabox $PREFIX/bin/emuinabox
 color_text 32 "Setup Complete! To start, type 'emuinabox'"
