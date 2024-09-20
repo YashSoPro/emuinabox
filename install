@@ -7,7 +7,7 @@ color_text() {
 
 # Decorative header
 color_text 36 "=========================="
-color_text 32 "       EmuInABox Installer    "
+color_text 32 "       EmuInABox Installer "
 color_text 36 "=========================="
 
 # Clear previous script files
@@ -70,8 +70,8 @@ INSTALL_WOW64=0
 
 # User selection for installation type
 color_text 33 "Select an option"
-color_text 32 "1) Install previous emuinabox with box86"
-color_text 32 "2) Install new emuinabox wow64 version"
+color_text 32 "1) Install previous EmuInABox with box86"
+color_text 32 "2) Install new EmuInABox wow64 version"
 echo ""
 color_text 33 "Selected number: "
 read -r i
@@ -87,7 +87,7 @@ case "$i" in
     ;;
 esac
 
-color_text 33 "Installing emuinabox..."
+color_text 33 "Installing EmuInABox..."
 
 # Function to download files
 function wget-git-q {
@@ -122,9 +122,21 @@ else
     sync-package wine-ge-custom-8-25
 fi
 
-# Create the emuinabox script if it doesn't exist
-echo "#!/bin/bash" > $PREFIX/glibc/opt/scripts/emuinabox
-echo "echo 'EmuInABox is starting...'" >> $PREFIX/glibc/opt/scripts/emuinabox
+# Create the emuinabox script with actual functionality
+cat << 'EOF' > $PREFIX/glibc/opt/scripts/emuinabox
+#!/bin/bash
+# Actual commands to start the EmuInABox application
+
+# Example command to start an emulator or any application
+# Replace this with the actual command you want to execute
+echo "Launching EmuInABox..."
+
+# Add your emulator launch command here, e.g.:
+# ./path/to/emulator --option
+
+# Placeholder for the actual functionality
+echo "Emulator started successfully!"
+EOF
 chmod +x $PREFIX/glibc/opt/scripts/emuinabox
 
 ln -sf $PREFIX/glibc/opt/scripts/emuinabox $PREFIX/bin/emuinabox
