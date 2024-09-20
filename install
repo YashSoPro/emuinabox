@@ -36,10 +36,8 @@ install_pkg_if_missing() {
 color_text 33 "Checking and installing essential libraries and tools..."
 
 # Fix for the missing 'libssl.so.3' issue
-if ! pkg install openssl -y &>> "$LOG_FILE"; then
-    color_text 31 "Failed to install OpenSSL. Check log for details."
-    exit 1
-fi
+install_pkg_if_missing "openssl-tool"
+install_pkg_if_missing "openssl"
 
 # Ensure wget is installed
 install_pkg_if_missing "wget"
