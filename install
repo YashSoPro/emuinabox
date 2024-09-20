@@ -12,6 +12,18 @@ LOGFILE=~/mobox_install.log
 exec > >(tee -i $LOGFILE)
 exec 2>&1
 
+# ASCII Art Function
+function show_ascii_art {
+    echo -e "${BLUE}"
+    echo "    ________  __  ______    "
+    echo "   / ____/ / / / / ____/___ "
+    echo "  / __/ / /_/ / / /   / __ \\"
+    echo " / /___/ __  / / /___/ /_/ /"
+    echo "/_____/_/ /_/  \\____/\\____/ "
+    echo "---------------------------"
+    echo -e "${NC}"
+}
+
 # Progress spinner function
 function spinner {
     local pid=$!
@@ -33,11 +45,22 @@ function install_package() {
     pkg install $1 -y &>/dev/null && echo -e "${GREEN}Installed $1 successfully${NC}" || echo -e "${RED}Failed to install $1${NC}"
 }
 
+# Start of the installation screen
+function installation_notice {
+    show_ascii_art
+    echo -e "${BLUE}--------------------------------------------------${NC}"
+    echo -e "${YELLOW}        Welcome to Mobox Installation${NC}"
+    echo -e "${BLUE}--------------------------------------------------${NC}"
+    echo -e "${YELLOW}>> Installing essential packages...${NC}"
+    echo -e "${YELLOW}>> Please wait while we set everything up!${NC}"
+    echo -e "${BLUE}--------------------------------------------------${NC}"
+}
+
 # Start the script
 rm ~/x
 
 # Install termux-am
-echo -e "${BLUE}Installing termux-am${NC}"
+installation_notice
 install_package termux-am
 
 # Set up storage
