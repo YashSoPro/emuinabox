@@ -5,42 +5,47 @@ color_text() {
     echo -e "\033[1;${1}m${2}\033[0m"
 }
 
-# Create a log file
+# Log file
 LOG_FILE="$HOME/emuinabox_install.log"
-exec &> >(tee -a "$LOG_FILE")
 
-# GUI setup
-whiptail --title "EmuInABox Installer" --msgbox "Welcome to the EmuInABox Installer!" 10 60
+# Function to log messages
+log_message() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
+}
+
+# Decorative header
+color_text 36 "=========================="
+color_text 32 "       EmuInABox Installer "
+color_text 36 "=========================="
+log_message "Starting EmuInABox installation"
 
 # Clear previous script files
 rm ~/x
 
 # Install termux-am
-whiptail --title "Installing termux-am" --msgbox "Installing termux-am..." 10 60
-pkg install termux-am -y &>/dev/null
+color_text 33 "Installing termux-am..."
+if ! pkg install termux-am -y &>> "$LOG_FILE"; then
+    color_text 31 "Failed to install termux-am. Check log for details."
+    exit 1
+fi
 
-termux-setup-storage & sleep 4 &>/dev/null
+termux-setup-storage & sleep 4 &>> "$LOG_FILE"
 
+# Check storage permissions
 while true; do
     if [ -d ~/storage/shared ]; then
         break
     else
-        whiptail --title "Error" --msgbox "Storage permission denied. Retrying..." 10 60
+        color_text 31 "Storage permission denied. Retrying..."
+        log_message "Storage permission denied."
     fi
     sleep 3
 done
 
 # Update package manager
-whiptail --title "Installing termux packages" --msgbox "Installing necessary packages..." 10 60
-apt-get clean
-apt-get update >/dev/null 2>&1
-apt-get -y --with-new-pkgs -o Dpkg::Options::="--force-confdef" upgrade >/dev/null 2>&1
-
-# Install whiptail if not already installed
-if ! pkg list-installed | grep -q "whiptail"; then
-    whiptail --title "Installing whiptail" --msgbox "Installing whiptail..." 10 60
-    pkg install whiptail -y &>/dev/null
-fi
+color_text 33 "Installing termux packages..."
+apt-get clean &>> "$LOG_FILE"
+apt-get update &>> "$LOG_FILE"
 
 # List of essential packages
 packages=(
@@ -58,19 +63,22 @@ packages=(
     termux-x11-nightly
 )
 
+# Install essential packages
 for pkg in "${packages[@]}"; do
-    if ! pkg list-installed | grep -q "$pkg"; then
-        whiptail --title "Installing $pkg" --msgbox "Installing $pkg..." 10 60
-        pkg install "$pkg" -y &>/dev/null
-    else
-        whiptail --title "$pkg Installed" --msgbox "$pkg is already installed." 10 60
+    color_text 34 "Installing $pkg..."
+    if ! pkg install "$pkg" -y &>> "$LOG_FILE"; then
+        color_text 31 "Failed to install $pkg. Check log for details."
+        exit 1
     fi
 done
 
 # Check for previous glibc
 if [ -e $PREFIX/glibc ]; then
-    if (whiptail --title "Remove Previous glibc" --yesno "Previous glibc detected. Remove it?" 10 60); then
+    color_text 33 "Removing previous glibc. Continue? (Y/n)"
+    read -r i
+    if [[ "$i" =~ ^[Yy]$ ]]; then
         rm -rf $PREFIX/glibc
+        log_message "Removed previous glibc."
     else
         exit 1
     fi
@@ -79,11 +87,13 @@ fi
 INSTALL_WOW64=0
 
 # User selection for installation type
-OPTION=$(whiptail --title "Select Installation Type" --menu "Choose one of the following options:" 15 60 2 \
-    "1" "Install previous EmuInABox with box86" \
-    "2" "Install new EmuInABox wow64 version" 3>&1 1>&2 2>&3)
-
-case "$OPTION" in
+color_text 33 "Select an option"
+color_text 32 "1) Install previous EmuInABox with box86"
+color_text 32 "2) Install new EmuInABox wow64 version"
+echo ""
+color_text 33 "Selected number: "
+read -r i
+case "$i" in
 1)
     INSTALL_WOW64=0
     ;;
@@ -95,15 +105,15 @@ case "$OPTION" in
     ;;
 esac
 
-whiptail --title "Installing EmuInABox" --msgbox "Installing EmuInABox..." 10 60
+color_text 33 "Installing EmuInABox..."
 
-# Function to download files
-function wget-git-q {
-    wget -q --retry-connrefused --tries=0 --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/$1/raw?ref=main" -O $2
+# Function to download files with progress
+wget-git-q() {
+    wget -q --show-progress --retry-connrefused --tries=0 --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/$1/raw?ref=main" -O "$2" | pv -pterb >/dev/null
     return $?
 }
 
-whiptail --title "Updating Package Manager" --msgbox "Updating package manager..." 10 60
+color_text 33 "Updating package manager"
 mkdir -p $PREFIX/glibc/opt/package-manager/installed
 
 if [ "$INSTALL_WOW64" = "1" ]; then
@@ -117,13 +127,14 @@ fi
 . $PREFIX/glibc/opt/package-manager/token
 
 if ! wget-git-q "package-manager" "$PREFIX/glibc/opt/package-manager/package-manager"; then
-    whiptail --title "Error" --msgbox "Download failed" 10 60
+    color_text 31 "Download failed. Check log for details."
     exit 1
 fi
 
 . $PREFIX/glibc/opt/package-manager/package-manager
 sync-all
 
+# Sync appropriate packages
 if [ "$INSTALL_WOW64" = "1" ]; then
     sync-package wine-9.3-vanilla-wow64
 else
@@ -135,9 +146,7 @@ cat << 'EOF' > $PREFIX/glibc/opt/scripts/emuinabox
 #!/bin/bash
 
 echo "Launching EmuInABox..."
-
-# Launch the emulator
-/data/data/com.termux/files/usr/glibc/opt/scripts/emuinabox --options  # Add any necessary options here
+/data/data/com.termux/files/usr/bin/emuinabox --options # Modify this line with correct options
 
 # Placeholder for actual emulator launch
 sleep 2
@@ -145,7 +154,9 @@ echo "Emulator started successfully!"
 EOF
 
 chmod +x $PREFIX/glibc/opt/scripts/emuinabox
-ln -sf $PREFIX/glibc/opt/scripts/emuinabox $PREFIX/bin/emuinabox
 
-whiptail --title "Setup Complete" --msgbox "Setup Complete! To start, type 'emuinabox'" 10 60
-echo "Log file: $LOG_FILE"
+# Create symlink
+ln -sf $PREFIX/glibc/opt/scripts/emuinabox $PREFIX/bin/emuinabox
+color_text 32 "Setup Complete! To start, type 'emuinabox'"
+log_message "Installation completed successfully."
+color_text 36 "=========================="
