@@ -122,23 +122,22 @@ else
     sync-package wine-ge-custom-8-25
 fi
 
-# Create the emuinabox script with actual functionality
+# Create the emuinabox script
 cat << 'EOF' > $PREFIX/glibc/opt/scripts/emuinabox
 #!/bin/bash
-# Actual commands to start the EmuInABox application
 
-# Example command to start an emulator or any application
-# Replace this with the actual command you want to execute
 echo "Launching EmuInABox..."
+# Replace this line with the actual command to launch your emulator
+/path/to/emulator --options  # Modify this line with the correct path and options
 
-# Add your emulator launch command here, e.g.:
-# ./path/to/emulator --option
-
-# Placeholder for the actual functionality
+# Placeholder for actual emulator launch
+sleep 2
 echo "Emulator started successfully!"
 EOF
+
 chmod +x $PREFIX/glibc/opt/scripts/emuinabox
 
+# Create symbolic link
 ln -sf $PREFIX/glibc/opt/scripts/emuinabox $PREFIX/bin/emuinabox
 color_text 32 "Setup Complete! To start, type 'emuinabox'"
 color_text 36 "=========================="
