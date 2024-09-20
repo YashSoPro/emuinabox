@@ -16,29 +16,9 @@ install_if_not_exists () {
 echo "Setting up EmuInABox environment..."
 
 # Ensure required packages are installed
-install_if_not_exists termux-am
-install_if_not_exists pulseaudio
-install_if_not_exists xwayland
 install_if_not_exists wget
-install_if_not_exists tsu
-install_if_not_exists patchelf
-install_if_not_exists p7zip
-install_if_not_exists xorg-xrandr
-install_if_not_exists ncurses-utils
-install_if_not_exists hashdeep
-install_if_not_exists termux-x11-nightly
-install_if_not_exists xorg-server
-install_if_not_exists xorg-xhost
-install_if_not_exists mesa
-install_if_not_exists i3
-install_if_not_exists gtk3
-install_if_not_exists xterm
-install_if_not_exists pcmanfm
-install_if_not_exists htop
-install_if_not_exists pavucontrol
-install_if_not_exists zenity
-install_if_not_exists geany
-install_if_not_exists winetricks
+install_if_not_exists proot
+install_if_not_exists tar
 
 # Set up storage access
 termux-setup-storage
@@ -59,95 +39,20 @@ echo "Storage permission granted."
 echo "Updating and upgrading packages..."
 apt update && apt upgrade -y
 
-# Install glibc
-if [ -e $PREFIX/glibc ]; then
-    echo -n "Removing previous glibc. Continue? (Y/n) "
-    read i
-    if [ "$i" = "Y" ] || [ "$i" = "y" ]; then
-        rm -rf $PREFIX/glibc
-    else
-        exit 1
-    fi
-fi
+# Download and install EmuInABox
+echo "Downloading EmuInABox..."
+wget https://github.com/Ilya114/Box64Droid/releases/download/2.3.4/Box64Droid-2.3.4-aarch64.tar.gz -O emuinabox.tar.gz
 
-echo "Installing glibc..."
-mkdir -p $PREFIX/glibc/opt/package-manager/installed
+echo "Extracting EmuInABox..."
+tar -xzvf emuinabox.tar.gz -C $HOME
 
-# Set up package manager
-echo "PRIVATE_TOKEN=glpat-h5r7HjKoPKZPxmfg79xs
-PROJECT_ID=54240888" > $PREFIX/glibc/opt/package-manager/token
+echo "Setting up EmuInABox..."
+chmod +x $HOME/Box64Droid/box64droid
 
-. $PREFIX/glibc/opt/package-manager/token
-
-wget -q --retry-connrefused --tries=0 --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/package-manager/raw?ref=main" -O $PREFIX/glibc/opt/package-manager/package-manager
-
-if [ $? -ne 0 ]; then
-    echo "Failed to download package manager. Please check your internet connection and try again."
-    exit 1
-fi
-
-. $PREFIX/glibc/opt/package-manager/package-manager
-sync-all
-
-echo "Installing Wine..."
-sync-package wine-9.3-vanilla-wow64
-
-# Create combined emuinabox script
+# Create emuinabox script
 cat > $PREFIX/bin/emuinabox << EOL
 #!/bin/bash
-
-# Function to check if a command exists
-command_exists () {
-    type "\$1" &> /dev/null ;
-}
-
-# Check if we're in a graphical environment
-if [ -n "\$DISPLAY" ]; then
-    # We're in a graphical environment, start the UI version
-    if command_exists i3; then
-        i3 &
-    else
-        echo "i3 not found. Continuing without window manager."
-    fi
-
-    sleep 2
-
-    if command_exists xterm; then
-        xterm &
-    else
-        echo "xterm not found. Continuing without terminal emulator."
-    fi
-else
-    # We're not in a graphical environment, start Xwayland
-    if command_exists Xwayland; then
-        Xwayland :0 &
-        export DISPLAY=:0
-        
-        if command_exists i3; then
-            i3 &
-        else
-            echo "i3 not found. Continuing without window manager."
-        fi
-
-        sleep 2
-
-        if command_exists xterm; then
-            xterm &
-        else
-            echo "xterm not found. Continuing without terminal emulator."
-        fi
-    else
-        echo "Xwayland not found. Running in non-graphical mode."
-    fi
-fi
-
-# Start the actual emuinabox environment
-if [ -f $PREFIX/glibc/opt/scripts/emuinabox ]; then
-    $PREFIX/glibc/opt/scripts/emuinabox
-else
-    echo "EmuInABox script not found. Please check your installation."
-    exit 1
-fi
+$HOME/Box64Droid/box64droid
 EOL
 
 chmod +x $PREFIX/bin/emuinabox
@@ -158,12 +63,11 @@ source ~/.bashrc
 
 echo "Setup complete!"
 echo "To start EmuInABox, simply type \"emuinabox\""
-echo "It will automatically detect whether you're in a graphical environment and start accordingly."
 
 # Print debug information
 echo "Debug Information:"
 echo "PATH: $PATH"
 echo "emuinabox location:"
 ls -l $PREFIX/bin/emuinabox
-echo "emuinabox script location:"
-ls -l $PREFIX/glibc/opt/scripts/emuinabox
+echo "Box64Droid script location:"
+ls -l $HOME/Box64Droid/box64droid
