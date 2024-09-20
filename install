@@ -1,11 +1,10 @@
-#!/bin/bash
 
-rm ~/x
+#!/bin/bash
 
 echo "Storage Setup... please don't close the app"
 pkg install termux-am -y &>/dev/null
 
-termux-setup-storage & sleep 4 &>/dev/null
+termux-setup-storage & sleep 6 &>/dev/null  # Increased sleep duration
 
 while true; do
     if [ -d ~/storage/shared ]; then
@@ -16,10 +15,9 @@ while true; do
     sleep 3
 done
 
-echo "Installing termux libraries"
-apt-get clean
-apt-get update >/dev/null 2>&1
-apt-get -y --with-new-pkgs -o Dpkg::Options::="--force-confdef" upgrade >/dev/null 2>&1
+echo "Updating package manager"
+pkg update >/dev/null 2>&1
+pkg upgrade -y >/dev/null 2>&1
 
 # List of essential packages
 packages=(
@@ -54,10 +52,11 @@ packages=(
 # Install packages in parallel
 echo "Installing libraries..."
 for pkg in "${packages[@]}"; do
-    pkg install "$pkg" -y &>/dev/null &
+    pkg install "$pkg" -y &>/dev/null
+    if [ $? -ne 0 ]; then
+        echo "Failed to install $pkg"
+    fi
 done
-
-wait  # Wait for all background jobs to finish
 
 if [ -e $PREFIX/glibc ]; then
     echo -n "Removing previous glibc. Continue? (Y/n) "
@@ -91,6 +90,7 @@ esac
 
 echo "Installing emuinabox"
 
+# Function for downloading
 function wget-git-q {
     wget -q --retry-connrefused --tries=0 --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/$1/raw?ref=main" -O $2
     return $?
