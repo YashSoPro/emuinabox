@@ -177,5 +177,5 @@ else
 fi
 
 # Create symbolic link for emuinabox
-ln -sf "$PREFIX/glibc/opt/scripts/emuinabox" "$PREFIX/bin/emustart"
-echo -e "${GREEN}Emuinabox installed. To start, type 'emustart'${NC}"
+ln -sf "$PREFIX/glibc/opt/scripts/emuinabox" "$PREFIX/bin/emuinabox"
+echo -e "${GREEN}Emuinabox installed. To start, type 'emuinabox'${NC}"
