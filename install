@@ -19,16 +19,39 @@ color_text 32 "       EmuInABox Installer "
 color_text 36 "=========================="
 log_message "Starting EmuInABox installation"
 
-# Clear previous script files
-rm ~/x
+# Function to install packages if not already installed
+install_pkg_if_missing() {
+    if ! command -v $1 &> /dev/null; then
+        color_text 33 "Installing $1..."
+        if ! pkg install $1 -y &>> "$LOG_FILE"; then
+            color_text 31 "Failed to install $1. Check log for details."
+            exit 1
+        fi
+    else
+        color_text 32 "$1 is already installed."
+    fi
+}
 
-# Install termux-am
-color_text 33 "Installing termux-am..."
-if ! pkg install termux-am -y &>> "$LOG_FILE"; then
-    color_text 31 "Failed to install termux-am. Check log for details."
+# Install essential tools and libraries
+color_text 33 "Checking and installing essential libraries and tools..."
+
+# Fix for the missing 'libssl.so.3' issue
+if ! pkg install openssl -y &>> "$LOG_FILE"; then
+    color_text 31 "Failed to install OpenSSL. Check log for details."
     exit 1
 fi
 
+# Ensure wget is installed
+install_pkg_if_missing "wget"
+
+# Ensure pv is installed
+install_pkg_if_missing "pv"
+
+# Install termux-am for storage access setup
+install_pkg_if_missing "termux-am"
+
+# Set up storage access for Termux
+color_text 33 "Setting up storage access..."
 termux-setup-storage & sleep 4 &>> "$LOG_FILE"
 
 # Check storage permissions
@@ -43,7 +66,7 @@ while true; do
 done
 
 # Update package manager
-color_text 33 "Installing termux packages..."
+color_text 33 "Updating package manager..."
 apt-get clean &>> "$LOG_FILE"
 apt-get update &>> "$LOG_FILE"
 
@@ -52,7 +75,6 @@ packages=(
     x11-repo
     pulseaudio
     xwayland
-    wget
     tsu
     root-repo
     patchelf
@@ -107,10 +129,23 @@ esac
 
 color_text 33 "Installing EmuInABox..."
 
-# Function to download files with progress
-wget-git-q() {
-    wget -q --show-progress --retry-connrefused --tries=0 --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/$1/raw?ref=main" -O "$2" | pv -pterb >/dev/null
-    return $?
+# Function to download files using wget or curl
+download_file() {
+    local url=$1
+    local output=$2
+    
+    # Try using wget first
+    if command -v wget &> /dev/null; then
+        wget --retry-connrefused --tries=0 --no-check-certificate --show-progress "$url" -O "$output"
+    else
+        # Fallback to curl if wget fails
+        if command -v curl &> /dev/null; then
+            curl --retry 5 --retry-connrefused --retry-delay 2 -L "$url" -o "$output"
+        else
+            color_text 31 "Both wget and curl are not installed. Exiting."
+            exit 1
+        fi
+    fi
 }
 
 color_text 33 "Updating package manager"
@@ -126,7 +161,9 @@ fi
 
 . $PREFIX/glibc/opt/package-manager/token
 
-if ! wget-git-q "package-manager" "$PREFIX/glibc/opt/package-manager/package-manager"; then
+download_file "https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/package-manager/raw?ref=main" "$PREFIX/glibc/opt/package-manager/package-manager"
+
+if ! [ -f "$PREFIX/glibc/opt/package-manager/package-manager" ]; then
     color_text 31 "Download failed. Check log for details."
     exit 1
 fi
