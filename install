@@ -1,31 +1,22 @@
 #!/bin/bash
 
-# Remove previous installation script
 rm ~/x
 
-# Install Zenity first
-pkg install zenity -y &>/dev/null
-
-# Install termux-am
+echo "Installing termux-am"
 pkg install termux-am -y &>/dev/null
 
-# Set up storage
 termux-setup-storage & sleep 4 &>/dev/null
 
-# Wait for storage permission
 while true; do
     if [ -d ~/storage/shared ]; then
         break
     else
-        echo "Storage permission denied. Please grant access."
+        echo "Storage permission denied"
     fi
     sleep 3
 done
 
-# Inform about package installation
-zenity --info --text="Installing termux packages"
-
-# Install required packages
+echo "Installing termux packages"
 apt-get clean
 apt-get update >/dev/null 2>&1
 apt-get -y --with-new-pkgs -o Dpkg::Options::="--force-confdef" upgrade >/dev/null 2>&1
@@ -43,58 +34,66 @@ pkg install hashdeep -y &>/dev/null
 pkg install termux-x11-nightly -y &>/dev/null
 
 if [ -e $PREFIX/glibc ]; then
-    if zenity --question --text="Removing previous glibc. Continue?"; then
+    echo -n "Removing previous glibc. Continue? (Y/n) "
+    read i
+    if [ "$i" = "Y" ] || [ "$i" = "y" ]; then
         rm -rf $PREFIX/glibc
     else
-        exit 1
+        return 1
     fi
 fi
 
 INSTALL_WOW64=0
 
-OPTION=$(zenity --list --title="Select an option" --column="Options" \
-1 "Install previous mobox with box86" \
-2 "Install new mobox wow64 version")
-
-if [ "$OPTION" = "1" ]; then
+echo "Select an option"
+echo "1) Install previous mobox with box86"
+echo "2) Install new mobox wow64 version"
+echo ""
+echo -n "Selected number: "
+read i
+case "$i" in
+1)
     INSTALL_WOW64=0
-elif [ "$OPTION" = "2" ]; then
+;;
+2)
     INSTALL_WOW64=1
-else
-    exit 1
-fi
+;;
+*)
+    return 1
+;;
+esac
 
-zenity --info --text="Installing mobox"
+echo "Installing mobox"
 
 function wget-git-q {
     wget -q --retry-connrefused --tries=0 --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/$1/raw?ref=main" -O $2
     return $?
 }
 
-zenity --info --text="Updating package manager"
+echo "Updating package manager"
 mkdir -p $PREFIX/glibc/opt/package-manager/installed
 
 if [ "$INSTALL_WOW64" = "1" ]; then
-    echo "PRIVATE_TOKEN=glpat-h5r7HjKoPKZPxmfg79xs
-PROJECT_ID=54240888" > $PREFIX/glibc/opt/package-manager/token
+echo "PRIVATE_TOKEN=glpat-h5r7HjKoPKZPxmfg79xs
+PROJECT_ID=54240888">$PREFIX/glibc/opt/package-manager/token
 else
-    echo "PRIVATE_TOKEN=glpat-Xs4HfrCkMpbedkPycqzP
-PROJECT_ID=52465323" > $PREFIX/glibc/opt/package-manager/token
+echo "PRIVATE_TOKEN=glpat-Xs4HfrCkMpbedkPycqzP
+PROJECT_ID=52465323">$PREFIX/glibc/opt/package-manager/token
 fi
 
 . $PREFIX/glibc/opt/package-manager/token
 if ! wget-git-q "package-manager" "$PREFIX/glibc/opt/package-manager/package-manager"; then
-    zenity --error --text="Download failed"
-    exit 1
+    echo "Download failed"
+    return 1
 fi
 . $PREFIX/glibc/opt/package-manager/package-manager
 sync-all
 
 if [ "$INSTALL_WOW64" = "1" ]; then
-    sync-package wine-9.3-vanilla-wow64
+sync-package wine-9.3-vanilla-wow64
 else
-    sync-package wine-ge-custom-8-25
+sync-package wine-ge-custom-8-25
 fi
 
 ln -sf $PREFIX/glibc/opt/scripts/mobox $PREFIX/bin/mobox
-zenity --info --text="To start - type \"mobox\""
+echo "To start - type \"mobox\""
