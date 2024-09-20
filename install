@@ -6,14 +6,15 @@ PACKAGE_MANAGER_URL="https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/f
 EMUINABOX_PATH="/data/data/com.termux/files/usr/bin/emuinabox" # Your emuinabox path
 SCRIPT_PATH="$PREFIX/glibc/opt/scripts/emuinabox"
 
+# Ensure necessary directories are created
+mkdir -p $PREFIX/glibc/opt/package-manager
+mkdir -p $PREFIX/glibc/opt/scripts
+
 # Function to install necessary packages
 install_packages() {
     echo "Installing necessary packages..."
     pkg install wget pv pulseaudio xwayland tsu root-repo patchelf p7zip xorg-xrandr ncurses-utils hashdeep termux-x11-nightly -y
 }
-
-# Ensure necessary directories are created
-mkdir -p $PREFIX/glibc/opt/scripts
 
 # Function to download files
 download_file() {
@@ -86,8 +87,4 @@ elif [ "$selected_option" -eq "2" ]; then
     echo "Installing new EmuInABox wow64 version..."
     # Add wow64 version installation steps
 else
-    echo "Invalid option selected."
-    exit 1
-fi
-
-echo "Installation complete!"
+   
