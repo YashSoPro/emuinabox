@@ -3,6 +3,9 @@
 # Remove previous installation script
 rm ~/x
 
+# Install Zenity first
+pkg install zenity -y &>/dev/null
+
 # Install termux-am
 pkg install termux-am -y &>/dev/null
 
@@ -19,17 +22,14 @@ while true; do
     sleep 3
 done
 
-# Install Zenity immediately after ensuring storage setup
-pkg install zenity -y &>/dev/null
-
-# Install termux packages with Zenity
+# Inform about package installation
 zenity --info --text="Installing termux packages"
+
+# Install required packages
 apt-get clean
 apt-get update >/dev/null 2>&1
 apt-get -y --with-new-pkgs -o Dpkg::Options::="--force-confdef" upgrade >/dev/null 2>&1
 pkg install x11-repo -y &>/dev/null
-
-# Continue with other package installations
 pkg install pulseaudio -y &>/dev/null
 pkg install xwayland -y &>/dev/null
 pkg install wget -y &>/dev/null
