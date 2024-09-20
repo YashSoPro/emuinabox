@@ -1,32 +1,35 @@
 #!/bin/bash
 
+# Remove previous installation script
 rm ~/x
 
-zenity --info --text="Installing termux-am"
+# Install termux-am without Zenity
 pkg install termux-am -y &>/dev/null
 
+# Set up storage without Zenity
 termux-setup-storage & sleep 4 &>/dev/null
 
+# Wait for storage permission
 while true; do
     if [ -d ~/storage/shared ]; then
         break
     else
-        zenity --warning --text="Storage permission denied"
+        echo "Storage permission denied. Please grant access."
     fi
     sleep 3
 done
 
+# Install termux packages with Zenity
 zenity --info --text="Installing termux packages"
 apt-get clean
 apt-get update >/dev/null 2>&1
 apt-get -y --with-new-pkgs -o Dpkg::Options::="--force-confdef" upgrade >/dev/null 2>&1
 pkg install x11-repo -y &>/dev/null
 
-# Install Zenity if not already installed
-if ! pkg list-installed | grep -q zenity; then
-    pkg install zenity -y &>/dev/null
-fi
+# Install Zenity
+pkg install zenity -y &>/dev/null
 
+# Continue with other package installations
 pkg install pulseaudio -y &>/dev/null
 pkg install xwayland -y &>/dev/null
 pkg install wget -y &>/dev/null
