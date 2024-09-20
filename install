@@ -1,90 +1,91 @@
 #!/bin/bash
 
-# Define variables
-PROJECT_ID=54240888 # Replace with the correct GitLab project ID if needed
-PACKAGE_MANAGER_URL="https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/package-manager/raw?ref=main"
-EMUINABOX_PATH="/data/data/com.termux/files/usr/bin/emuinabox" # Your emuinabox path
-SCRIPT_PATH="$PREFIX/glibc/opt/scripts/emuinabox"
+rm ~/x
 
-# Ensure necessary directories are created
-mkdir -p $PREFIX/glibc/opt/package-manager
-mkdir -p $PREFIX/glibc/opt/scripts
+zenity --info --text="Installing termux-am"
+pkg install termux-am -y &>/dev/null
 
-# Function to install necessary packages
-install_packages() {
-    echo "Installing necessary packages..."
-    pkg install wget pv pulseaudio xwayland tsu root-repo patchelf p7zip xorg-xrandr ncurses-utils hashdeep termux-x11-nightly -y
-}
+termux-setup-storage & sleep 4 &>/dev/null
 
-# Function to download files
-download_file() {
-    local url=$1
-    local output=$2
-    
-    if command -v wget &> /dev/null; then
-        wget --retry-connrefused --tries=0 --no-check-certificate --show-progress "$url" -O "$output"
-    elif command -v curl &> /dev/null; then
-        curl --retry 5 --retry-connrefused --retry-delay 2 -L "$url" -o "$output"
+while true; do
+    if [ -d ~/storage/shared ]; then
+        break
     else
-        echo "Both wget and curl are not installed. Exiting."
+        zenity --warning --text="Storage permission denied"
+    fi
+    sleep 3
+done
+
+zenity --info --text="Installing termux packages"
+apt-get clean
+apt-get update >/dev/null 2>&1
+apt-get -y --with-new-pkgs -o Dpkg::Options::="--force-confdef" upgrade >/dev/null 2>&1
+pkg install x11-repo -y &>/dev/null
+pkg install pulseaudio -y &>/dev/null
+pkg install xwayland -y &>/dev/null
+pkg install wget -y &>/dev/null
+pkg install tsu -y &>/dev/null
+pkg install root-repo -y &>/dev/null
+pkg install patchelf -y &>/dev/null
+pkg install p7zip -y &>/dev/null
+pkg install xorg-xrandr -y &>/dev/null
+pkg install ncurses-utils -y &>/dev/null
+pkg install hashdeep -y &>/dev/null
+pkg install termux-x11-nightly -y &>/dev/null
+
+if [ -e $PREFIX/glibc ]; then
+    if zenity --question --text="Removing previous glibc. Continue?"; then
+        rm -rf $PREFIX/glibc
+    else
         exit 1
     fi
-}
+fi
 
-# Download package manager file (update URL if needed)
-download_file "$PACKAGE_MANAGER_URL" "$PREFIX/glibc/opt/package-manager/package-manager"
+INSTALL_WOW64=0
 
-if [ ! -f "$PREFIX/glibc/opt/package-manager/package-manager" ]; then
-    echo "Download failed. Check log for details."
+OPTION=$(zenity --list --title="Select an option" --column="Options" \
+1 "Install previous mobox with box86" \
+2 "Install new mobox wow64 version")
+
+if [ "$OPTION" = "1" ]; then
+    INSTALL_WOW64=0
+elif [ "$OPTION" = "2" ]; then
+    INSTALL_WOW64=1
+else
     exit 1
 fi
 
-# Create the emuinabox script with correct path
-cat << EOF > $SCRIPT_PATH
-#!/bin/bash
+zenity --info --text="Installing mobox"
 
-echo "Launching EmuInABox..."
-$EMUINABOX_PATH --options # Replace --options with actual options for your emulator
+function wget-git-q {
+    wget -q --retry-connrefused --tries=0 --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/$1/raw?ref=main" -O $2
+    return $?
+}
 
-# Placeholder for actual emulator launch
-sleep 2
-echo "Emulator started successfully!"
-EOF
+zenity --info --text="Updating package manager"
+mkdir -p $PREFIX/glibc/opt/package-manager/installed
 
-# Give execution permission to the script
-chmod +x $SCRIPT_PATH
-
-# Create symlink to the binary in /usr/bin
-ln -sf $SCRIPT_PATH $PREFIX/bin/emuinabox
-
-echo "Setup Complete! To start, type 'emuinabox'"
-
-# Install additional packages if not installed
-if ! command -v pv &> /dev/null; then
-    echo "Installing pv..."
-    pkg install pv -y
-fi
-
-# Ask if the user wants to remove previous glibc and proceed with installation
-read -p "Removing previous glibc. Continue? (Y/n): " proceed
-
-if [[ $proceed =~ ^[Yy]$ ]]; then
-    echo "Removing previous glibc..."
-    # Placeholder for actual glibc removal code
-fi
-
-# Give user options for installation types
-echo "Select an option:"
-echo "1) Install previous EmuInABox with box86"
-echo "2) Install new EmuInABox wow64 version"
-
-read -p "Selected number: " selected_option
-
-if [ "$selected_option" -eq "1" ]; then
-    echo "Installing previous EmuInABox with box86..."
-    # Add box86 installation steps
-elif [ "$selected_option" -eq "2" ]; then
-    echo "Installing new EmuInABox wow64 version..."
-    # Add wow64 version installation steps
+if [ "$INSTALL_WOW64" = "1" ]; then
+    echo "PRIVATE_TOKEN=glpat-h5r7HjKoPKZPxmfg79xs
+PROJECT_ID=54240888" > $PREFIX/glibc/opt/package-manager/token
 else
-   
+    echo "PRIVATE_TOKEN=glpat-Xs4HfrCkMpbedkPycqzP
+PROJECT_ID=52465323" > $PREFIX/glibc/opt/package-manager/token
+fi
+
+. $PREFIX/glibc/opt/package-manager/token
+if ! wget-git-q "package-manager" "$PREFIX/glibc/opt/package-manager/package-manager"; then
+    zenity --error --text="Download failed"
+    exit 1
+fi
+. $PREFIX/glibc/opt/package-manager/package-manager
+sync-all
+
+if [ "$INSTALL_WOW64" = "1" ]; then
+    sync-package wine-9.3-vanilla-wow64
+else
+    sync-package wine-ge-custom-8-25
+fi
+
+ln -sf $PREFIX/glibc/opt/scripts/mobox $PREFIX/bin/mobox
+zenity --info --text="To start - type \"mobox\""
