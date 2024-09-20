@@ -1,73 +1,160 @@
 #!/bin/bash
 
-# Function to check if a command exists
-command_exists () {
-    type "$1" &> /dev/null ;
+# Color definitions
+RED="\e[31m"
+GREEN="\e[32m"
+YELLOW="\e[33m"
+BLUE="\e[34m"
+NC="\e[0m" # No Color
+
+# Log file
+LOGFILE=~/mobox_install.log
+exec > >(tee -i $LOGFILE)
+exec 2>&1
+
+# Progress spinner function
+function spinner {
+    local pid=$!
+    local delay=0.1
+    local spinstr='|/-\'
+    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
+        local temp=${spinstr#?}
+        printf " [%c]  " "$spinstr"
+        spinstr=$temp${spinstr%"$temp"}
+        sleep $delay
+        printf "\b\b\b\b\b\b"
+    done
+    printf "    \b\b\b\b"
 }
 
-# Function to install a package if it's not already installed
-install_if_not_exists () {
-    if ! command_exists $1; then
-        echo "Installing $1..."
-        pkg install $1 -y
-    fi
+# Package installation function with colored output
+function install_package() {
+    echo -e "${YELLOW}Installing $1...${NC}"
+    pkg install $1 -y &>/dev/null && echo -e "${GREEN}Installed $1 successfully${NC}" || echo -e "${RED}Failed to install $1${NC}"
 }
 
-echo "Setting up EmuInABox environment..."
+# Start the script
+rm ~/x
 
-# Ensure required packages are installed
-install_if_not_exists wget
-install_if_not_exists proot
-install_if_not_exists tar
+# Install termux-am
+echo -e "${BLUE}Installing termux-am${NC}"
+install_package termux-am
 
-# Set up storage access
-termux-setup-storage
+# Set up storage
+echo -n -e "${YELLOW}Setting up storage...${NC}"
+termux-setup-storage & spinner
+sleep 4
 
-# Wait for storage permissions
+# Wait for storage access
 while true; do
     if [ -d ~/storage/shared ]; then
+        echo -e "${GREEN}Storage setup complete${NC}"
         break
     else
-        echo "Waiting for storage permission..."
+        echo -e "${RED}Storage permission denied${NC}"
     fi
     sleep 3
 done
 
-echo "Storage permission granted."
+# Installing termux packages
+echo -e "${BLUE}Updating package manager and installing essential packages...${NC}"
+apt-get clean
+apt-get update >/dev/null 2>&1
+apt-get -y --with-new-pkgs -o Dpkg::Options::="--force-confdef" upgrade >/dev/null 2>&1
 
-# Update and upgrade packages
-echo "Updating and upgrading packages..."
-apt update && apt upgrade -y
+install_package x11-repo
+install_package pulseaudio
+install_package xwayland
+install_package wget
+install_package tsu
+install_package root-repo
+install_package patchelf
+install_package p7zip
+install_package xorg-xrandr
+install_package ncurses-utils
+install_package hashdeep
+install_package termux-x11-nightly
 
-# Download and install EmuInABox
-echo "Downloading EmuInABox..."
-wget https://github.com/Ilya114/Box64Droid/releases/download/2.3.4/Box64Droid-2.3.4-aarch64.tar.gz -O emuinabox.tar.gz
+# New useful packages for development and debugging
+install_package htop
+install_package git
+install_package vim
+install_package python
+install_package neofetch
 
-echo "Extracting EmuInABox..."
-tar -xzvf emuinabox.tar.gz -C $HOME
+# Remove previous glibc installation
+if [ -e "$PREFIX/glibc" ]; then
+    echo -n -e "${YELLOW}Previous glibc installation found. Do you want to remove it? (Y/n)${NC} "
+    read -r i
+    i=${i:-Y}
+    if [[ "$i" =~ ^[Yy]$ ]]; then
+        rm -rf "$PREFIX/glibc"
+        echo -e "${GREEN}Previous glibc removed.${NC}"
+    else
+        echo -e "${RED}Skipping glibc removal.${NC}"
+        return 1
+    fi
+fi
 
-echo "Setting up EmuInABox..."
-chmod +x $HOME/Box64Droid/box64droid
+# Install Mobox - User input for version selection
+INSTALL_WOW64=0
+while true; do
+    echo -e "${YELLOW}Select an option:${NC}"
+    echo -e "${BLUE}1)${NC} Install previous mobox with box86"
+    echo -e "${BLUE}2)${NC} Install new mobox wow64 version"
+    echo -n -e "${YELLOW}Selected number: ${NC}"
+    read -r i
+    case "$i" in
+        1)
+            INSTALL_WOW64=0
+            break
+        ;;
+        2)
+            INSTALL_WOW64=1
+            break
+        ;;
+        *)
+            echo -e "${RED}Invalid option! Please select 1 or 2.${NC}"
+        ;;
+    esac
+done
 
-# Create emuinabox script
-cat > $PREFIX/bin/emuinabox << EOL
-#!/bin/bash
-$HOME/Box64Droid/box64droid
-EOL
+# Function to download from Git with retries
+function wget-git-q {
+    wget -q --retry-connrefused --tries=0 --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/$1/raw?ref=main" -O "$2"
+    return $?
+}
 
-chmod +x $PREFIX/bin/emuinabox
+# Install mobox
+echo -e "${BLUE}Installing mobox${NC}"
+mkdir -p "$PREFIX/glibc/opt/package-manager/installed"
 
-# Update PATH
-echo 'export PATH=$PATH:$PREFIX/bin' >> ~/.bashrc
-source ~/.bashrc
+if [ "$INSTALL_WOW64" = "1" ]; then
+    echo "PRIVATE_TOKEN=glpat-h5r7HjKoPKZPxmfg79xs
+    PROJECT_ID=54240888">$PREFIX/glibc/opt/package-manager/token
+else
+    echo "PRIVATE_TOKEN=glpat-Xs4HfrCkMpbedkPycqzP
+    PROJECT_ID=52465323">$PREFIX/glibc/opt/package-manager/token
+fi
 
-echo "Setup complete!"
-echo "To start EmuInABox, simply type \"emuinabox\""
+# Load tokens and package manager
+. "$PREFIX/glibc/opt/package-manager/token"
+if ! wget-git-q "package-manager" "$PREFIX/glibc/opt/package-manager/package-manager"; then
+    echo -e "${RED}Download failed${NC}"
+    return 1
+fi
+. "$PREFIX/glibc/opt/package-manager/package-manager"
 
-# Print debug information
-echo "Debug Information:"
-echo "PATH: $PATH"
-echo "emuinabox location:"
-ls -l $PREFIX/bin/emuinabox
-echo "Box64Droid script location:"
-ls -l $HOME/Box64Droid/box64droid
+# Synchronize and install wine packages
+sync-all
+if [ "$INSTALL_WOW64" = "1" ]; then
+    sync-package wine-9.3-vanilla-wow64
+else
+    sync-package wine-ge-custom-8-25
+fi
+
+# Create symbolic link for mobox
+ln -sf "$PREFIX/glibc/opt/scripts/mobox" "$PREFIX/bin/mobox"
+echo -e "${GREEN}Mobox installed. To start, type 'mobox'${NC}"
+
+# End of script
