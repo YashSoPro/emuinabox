@@ -8,13 +8,13 @@ English
 # Installation
 1. Install
 [Termux](https://f-droid.org/repo/com.termux_118.apk),
-[Termux-X11](https://raw.githubusercontent.com/YashSoPro/mobox/main/components/termux-x11.apk) and
-[Input Bridge](https://raw.githubusercontent.com/YashSoPro/mobox/main/components/inputbridge.apk).
+[Termux-X11](https://raw.githubusercontent.com/YashSoPro/emuinabox/main/components/termux-x11.apk) and
+[Input Bridge](https://raw.githubusercontent.com/YashSoPro/emuinabox/main/components/inputbridge.apk).
 
 2. Open termux and paste command
 
 ```bash
-curl -s -o ~/x https://raw.githubusercontent.com/YashSoPro/mobox/main/install && . ~/x
+curl -s -o ~/x https://raw.githubusercontent.com/YashSoPro/emuinabox/main/install && . ~/x
 ```
 
 3. Type `mobox` in termux.
