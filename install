@@ -8,7 +8,7 @@ BLUE="\e[34m"
 NC="\e[0m" # No Color
 
 # Log file
-LOGFILE=~/mobox_install.log
+LOGFILE=~/emuinabox_install.log
 exec > >(tee -i $LOGFILE)
 exec 2>&1
 
@@ -49,7 +49,7 @@ function install_package() {
 function installation_notice {
     show_ascii_art
     echo -e "${BLUE}--------------------------------------------------${NC}"
-    echo -e "${YELLOW}        Welcome to Mobox Installation${NC}"
+    echo -e "${YELLOW}        Welcome to Emuinabox Installation${NC}"
     echo -e "${BLUE}--------------------------------------------------${NC}"
     echo -e "${YELLOW}>> Installing essential packages...${NC}"
     echo -e "${YELLOW}>> Please wait while we set everything up!${NC}"
@@ -119,12 +119,12 @@ if [ -e "$PREFIX/glibc" ]; then
     fi
 fi
 
-# Install Mobox - User input for version selection
+# Install Emuinabox - User input for version selection
 INSTALL_WOW64=0
 while true; do
     echo -e "${YELLOW}Select an option:${NC}"
-    echo -e "${BLUE}1)${NC} Install previous mobox with box86"
-    echo -e "${BLUE}2)${NC} Install new mobox wow64 version"
+    echo -e "${BLUE}1)${NC} Install previous emuinabox with box86"
+    echo -e "${BLUE}2)${NC} Install new emuinabox wow64 version"
     echo -n -e "${YELLOW}Selected number: ${NC}"
     read -r i
     case "$i" in
@@ -148,8 +148,8 @@ function wget-git-q {
     return $?
 }
 
-# Install mobox
-echo -e "${BLUE}Installing mobox${NC}"
+# Install emuinabox
+echo -e "${BLUE}Installing emuinabox${NC}"
 mkdir -p "$PREFIX/glibc/opt/package-manager/installed"
 
 if [ "$INSTALL_WOW64" = "1" ]; then
@@ -176,8 +176,6 @@ else
     sync-package wine-ge-custom-8-25
 fi
 
-# Create symbolic link for mobox
-ln -sf "$PREFIX/glibc/opt/scripts/mobox" "$PREFIX/bin/mobox"
-echo -e "${GREEN}Mobox installed. To start, type 'mobox'${NC}"
-
-# End of script
+# Create symbolic link for emuinabox
+ln -sf "$PREFIX/glibc/opt/scripts/emuinabox" "$PREFIX/bin/emustart"
+echo -e "${GREEN}Emuinabox installed. To start, type 'emustart'${NC}"
