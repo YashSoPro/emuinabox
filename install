@@ -2,7 +2,7 @@
 
 rm ~/x
 
-echo "Installing termux-am"
+echo "Storage Setup... please dont close app"
 pkg install termux-am -y &>/dev/null
 
 termux-setup-storage & sleep 4 &>/dev/null
@@ -16,7 +16,7 @@ while true; do
     sleep 3
 done
 
-echo "Storage Setup... please dont close app"
+echo "Installing termux libraries"
 apt-get clean
 apt-get update >/dev/null 2>&1
 apt-get -y --with-new-pkgs -o Dpkg::Options::="--force-confdef" upgrade >/dev/null 2>&1
