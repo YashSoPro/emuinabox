@@ -4,7 +4,6 @@ rm ~/x
 
 echo "Storage Setup... please don't close the app"
 pkg install termux-am -y &>/dev/null
-
 termux-setup-storage & sleep 4 &>/dev/null
 
 while true; do
@@ -16,24 +15,21 @@ while true; do
     sleep 3
 done
 
-echo "Installing termux libraries"
-apt-get clean
 echo "Updating package manager..."
-apt-get update
+termux-change-repo &>/dev/null
+apt-get clean
+apt-get update >/dev/null 2>&1
 if [ $? -ne 0 ]; then
-    echo "Failed to update package manager. Check your network connection."
+    echo "Failed to update package manager. Please check your network connection or repository settings."
     exit 1
 fi
 
-apt-get -y --with-new-pkgs -o Dpkg::Options::="--force-confdef" upgrade
-if [ $? -ne 0 ]; then
-    echo "Failed to upgrade packages."
-    exit 1
-fi
-
+echo "Installing termux libraries..."
+apt-get -y --with-new-pkgs -o Dpkg::Options::="--force-confdef" upgrade >/dev/null 2>&1
 pkg install x11-repo -y &>/dev/null
 pkg install pulseaudio -y &>/dev/null
 pkg install xwayland -y &>/dev/null
+pkg install wget -y &>/dev/null
 pkg install tsu -y &>/dev/null
 pkg install root-repo -y &>/dev/null
 pkg install patchelf -y &>/dev/null
@@ -42,15 +38,8 @@ pkg install xorg-xrandr -y &>/dev/null
 pkg install ncurses-utils -y &>/dev/null
 pkg install hashdeep -y &>/dev/null
 
-# Installing wget
-pkg install wget -y &>/dev/null
-if [ $? -ne 0 ]; then
-    echo "Failed to install wget."
-    exit 1
-fi
-
 # Installing gaming-related libraries
-echo "Installing gaming libraries"
+echo "Installing gaming libraries..."
 pkg install mesa -y &>/dev/null
 pkg install vulkan-utils -y &>/dev/null
 pkg install glx-utils -y &>/dev/null
@@ -96,22 +85,22 @@ case "$i" in
 ;;
 esac
 
-echo "Installing emuinabox"
+echo "Installing emuinabox..."
 
 function wget-git-q {
     wget -q --retry-connrefused --tries=0 --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/$1/raw?ref=main" -O $2
     return $?
 }
 
-echo "Updating package manager"
+echo "Updating package manager..."
 mkdir -p $PREFIX/glibc/opt/package-manager/installed
 
 if [ "$INSTALL_WOW64" = "1" ]; then
     echo "PRIVATE_TOKEN=glpat-h5r7HjKoPKZPxmfg79xs
-    PROJECT_ID=54240888" >$PREFIX/glibc/opt/package-manager/token
+PROJECT_ID=54240888" > $PREFIX/glibc/opt/package-manager/token
 else
     echo "PRIVATE_TOKEN=glpat-Xs4HfrCkMpbedkPycqzP
-    PROJECT_ID=52465323" >$PREFIX/glibc/opt/package-manager/token
+PROJECT_ID=52465323" > $PREFIX/glibc/opt/package-manager/token
 fi
 
 . $PREFIX/glibc/opt/package-manager/token
@@ -132,7 +121,7 @@ ln -sf $PREFIX/glibc/opt/scripts/emuinabox $PREFIX/bin/emuinabox
 echo "To start - type \"emuinabox\""
 
 # Ajay Mobox Patch v1.1 Installation
-echo "Installing Ajay Mobox Patch v1.1"
+echo "Installing Ajay Mobox Patch v1.1..."
 cd ~/storage/shared
 wget https://github.com/ajay9634/mobox_patch/releases/download/1.1/Ajay.mobox.patch.v1.1.7z
 
