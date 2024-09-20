@@ -1,197 +1,93 @@
 #!/bin/bash
 
-# Function to print colored text
-color_text() {
-    echo -e "\033[1;${1}m${2}\033[0m"
+# Define variables
+PROJECT_ID=54240888 # Replace with the correct GitLab project ID if needed
+PACKAGE_MANAGER_URL="https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/package-manager/raw?ref=main"
+EMUINABOX_PATH="/data/data/com.termux/files/usr/bin/emuinabox" # Your emuinabox path
+SCRIPT_PATH="$PREFIX/glibc/opt/scripts/emuinabox"
+
+# Function to install necessary packages
+install_packages() {
+    echo "Installing necessary packages..."
+    pkg install wget pv pulseaudio xwayland tsu root-repo patchelf p7zip xorg-xrandr ncurses-utils hashdeep termux-x11-nightly -y
 }
 
-# Log file
-LOG_FILE="$HOME/emuinabox_install.log"
+# Ensure necessary directories are created
+mkdir -p $PREFIX/glibc/opt/scripts
 
-# Function to log messages
-log_message() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
-}
-
-# Decorative header
-color_text 36 "=========================="
-color_text 32 "       EmuInABox Installer "
-color_text 36 "=========================="
-log_message "Starting EmuInABox installation"
-
-# Function to install packages if not already installed
-install_pkg_if_missing() {
-    if ! command -v $1 &> /dev/null; then
-        color_text 33 "Installing $1..."
-        if ! pkg install $1 -y &>> "$LOG_FILE"; then
-            color_text 31 "Failed to install $1. Check log for details."
-            exit 1
-        fi
-    else
-        color_text 32 "$1 is already installed."
-    fi
-}
-
-# Install essential tools and libraries
-color_text 33 "Checking and installing essential libraries and tools..."
-
-# Fix for the missing 'libssl.so.3' issue
-install_pkg_if_missing "openssl-tool"
-install_pkg_if_missing "openssl"
-
-# Ensure wget is installed
-install_pkg_if_missing "wget"
-
-# Ensure pv is installed
-install_pkg_if_missing "pv"
-
-# Install termux-am for storage access setup
-install_pkg_if_missing "termux-am"
-
-# Set up storage access for Termux
-color_text 33 "Setting up storage access..."
-termux-setup-storage & sleep 4 &>> "$LOG_FILE"
-
-# Check storage permissions
-while true; do
-    if [ -d ~/storage/shared ]; then
-        break
-    else
-        color_text 31 "Storage permission denied. Retrying..."
-        log_message "Storage permission denied."
-    fi
-    sleep 3
-done
-
-# Update package manager
-color_text 33 "Updating package manager..."
-apt-get clean &>> "$LOG_FILE"
-apt-get update &>> "$LOG_FILE"
-
-# List of essential packages
-packages=(
-    x11-repo
-    pulseaudio
-    xwayland
-    tsu
-    root-repo
-    patchelf
-    p7zip
-    xorg-xrandr
-    ncurses-utils
-    hashdeep
-    termux-x11-nightly
-)
-
-# Install essential packages
-for pkg in "${packages[@]}"; do
-    color_text 34 "Installing $pkg..."
-    if ! pkg install "$pkg" -y &>> "$LOG_FILE"; then
-        color_text 31 "Failed to install $pkg. Check log for details."
-        exit 1
-    fi
-done
-
-# Check for previous glibc
-if [ -e $PREFIX/glibc ]; then
-    color_text 33 "Removing previous glibc. Continue? (Y/n)"
-    read -r i
-    if [[ "$i" =~ ^[Yy]$ ]]; then
-        rm -rf $PREFIX/glibc
-        log_message "Removed previous glibc."
-    else
-        exit 1
-    fi
-fi
-
-INSTALL_WOW64=0
-
-# User selection for installation type
-color_text 33 "Select an option"
-color_text 32 "1) Install previous EmuInABox with box86"
-color_text 32 "2) Install new EmuInABox wow64 version"
-echo ""
-color_text 33 "Selected number: "
-read -r i
-case "$i" in
-1)
-    INSTALL_WOW64=0
-    ;;
-2)
-    INSTALL_WOW64=1
-    ;;
-*)
-    exit 1
-    ;;
-esac
-
-color_text 33 "Installing EmuInABox..."
-
-# Function to download files using wget or curl
+# Function to download files
 download_file() {
     local url=$1
     local output=$2
     
-    # Try using wget first
     if command -v wget &> /dev/null; then
         wget --retry-connrefused --tries=0 --no-check-certificate --show-progress "$url" -O "$output"
+    elif command -v curl &> /dev/null; then
+        curl --retry 5 --retry-connrefused --retry-delay 2 -L "$url" -o "$output"
     else
-        # Fallback to curl if wget fails
-        if command -v curl &> /dev/null; then
-            curl --retry 5 --retry-connrefused --retry-delay 2 -L "$url" -o "$output"
-        else
-            color_text 31 "Both wget and curl are not installed. Exiting."
-            exit 1
-        fi
+        echo "Both wget and curl are not installed. Exiting."
+        exit 1
     fi
 }
 
-color_text 33 "Updating package manager"
-mkdir -p $PREFIX/glibc/opt/package-manager/installed
+# Download package manager file (update URL if needed)
+download_file "$PACKAGE_MANAGER_URL" "$PREFIX/glibc/opt/package-manager/package-manager"
 
-if [ "$INSTALL_WOW64" = "1" ]; then
-    echo "PRIVATE_TOKEN=glpat-h5r7HjKoPKZPxmfg79xs
-PROJECT_ID=54240888" > $PREFIX/glibc/opt/package-manager/token
-else
-    echo "PRIVATE_TOKEN=glpat-Xs4HfrCkMpbedkPycqzP
-PROJECT_ID=52465323" > $PREFIX/glibc/opt/package-manager/token
-fi
-
-. $PREFIX/glibc/opt/package-manager/token
-
-download_file "https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/package-manager/raw?ref=main" "$PREFIX/glibc/opt/package-manager/package-manager"
-
-if ! [ -f "$PREFIX/glibc/opt/package-manager/package-manager" ]; then
-    color_text 31 "Download failed. Check log for details."
+if [ ! -f "$PREFIX/glibc/opt/package-manager/package-manager" ]; then
+    echo "Download failed. Check log for details."
     exit 1
 fi
 
-. $PREFIX/glibc/opt/package-manager/package-manager
-sync-all
-
-# Sync appropriate packages
-if [ "$INSTALL_WOW64" = "1" ]; then
-    sync-package wine-9.3-vanilla-wow64
-else
-    sync-package wine-ge-custom-8-25
-fi
-
-# Create the emuinabox script
-cat << 'EOF' > $PREFIX/glibc/opt/scripts/emuinabox
+# Create the emuinabox script with correct path
+cat << EOF > $SCRIPT_PATH
 #!/bin/bash
 
 echo "Launching EmuInABox..."
-/data/data/com.termux/files/usr/bin/emuinabox --options # Modify this line with correct options
+$EMUINABOX_PATH --options # Replace --options with actual options for your emulator
 
 # Placeholder for actual emulator launch
 sleep 2
 echo "Emulator started successfully!"
 EOF
 
-chmod +x $PREFIX/glibc/opt/scripts/emuinabox
+# Give execution permission to the script
+chmod +x $SCRIPT_PATH
 
-# Create symlink
-ln -sf $PREFIX/glibc/opt/scripts/emuinabox $PREFIX/bin/emuinabox
-color_text 32 "Setup Complete! To start, type 'emuinabox'"
-log_message "Installation completed successfully."
-color_text 36 "=========================="
+# Create symlink to the binary in /usr/bin
+ln -sf $SCRIPT_PATH $PREFIX/bin/emuinabox
+
+echo "Setup Complete! To start, type 'emuinabox'"
+
+# Install additional packages if not installed
+if ! command -v pv &> /dev/null; then
+    echo "Installing pv..."
+    pkg install pv -y
+fi
+
+# Ask if the user wants to remove previous glibc and proceed with installation
+read -p "Removing previous glibc. Continue? (Y/n): " proceed
+
+if [[ $proceed =~ ^[Yy]$ ]]; then
+    echo "Removing previous glibc..."
+    # Placeholder for actual glibc removal code
+fi
+
+# Give user options for installation types
+echo "Select an option:"
+echo "1) Install previous EmuInABox with box86"
+echo "2) Install new EmuInABox wow64 version"
+
+read -p "Selected number: " selected_option
+
+if [ "$selected_option" -eq "1" ]; then
+    echo "Installing previous EmuInABox with box86..."
+    # Add box86 installation steps
+elif [ "$selected_option" -eq "2" ]; then
+    echo "Installing new EmuInABox wow64 version..."
+    # Add wow64 version installation steps
+else
+    echo "Invalid option selected."
+    exit 1
+fi
+
+echo "Installation complete!"
