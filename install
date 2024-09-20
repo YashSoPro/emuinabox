@@ -33,6 +33,37 @@ pkg install ncurses-utils -y &>/dev/null
 pkg install hashdeep -y &>/dev/null
 pkg install termux-x11-nightly -y &>/dev/null
 
+# Installing gaming-related libraries
+echo "Installing gaming libraries"
+
+# 1. Multimedia and Graphics Libraries
+pkg install mesa -y &>/dev/null
+pkg install vulkan-utils -y &>/dev/null
+pkg install glx-utils -y &>/dev/null
+
+# 2. Input/Controller Support
+pkg install libinput -y &>/dev/null
+pkg install joystick -y &>/dev/null
+
+# 3. Audio Libraries
+pkg install alsa-lib -y &>/dev/null
+pkg install pipewire -y &>/dev/null
+
+# 4. Wine Compatibility
+pkg install wine-staging -y &>/dev/null
+pkg install winetricks -y &>/dev/null
+
+# 5. Performance Enhancement Tools
+pkg install gamemode -y &>/dev/null
+pkg install cpufrequtils -y &>/dev/null
+
+# 6. DirectX to Vulkan Translation
+pkg install dxvk -y &>/dev/null
+
+# 7. Gaming Platforms
+pkg install lutris -y &>/dev/null
+pkg install steamcmd -y &>/dev/null
+
 if [ -e $PREFIX/glibc ]; then
     echo -n "Removing previous glibc. Continue? (Y/n) "
     read i
@@ -46,8 +77,8 @@ fi
 INSTALL_WOW64=0
 
 echo "Select an option"
-echo "1) Install previous mobox with box86"
-echo "2) Install new mobox wow64 version"
+echo "1) Install previous emuinabox with box86"
+echo "2) Install new emuinabox wow64 version"
 echo ""
 echo -n "Selected number: "
 read i
@@ -63,7 +94,7 @@ case "$i" in
 ;;
 esac
 
-echo "Installing mobox"
+echo "Installing emuinabox"
 
 function wget-git-q {
     wget -q --retry-connrefused --tries=0 --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/$1/raw?ref=main" -O $2
@@ -95,5 +126,13 @@ else
 sync-package wine-ge-custom-8-25
 fi
 
-ln -sf $PREFIX/glibc/opt/scripts/mobox $PREFIX/bin/mobox
-echo "To start - type \"mobox\""
+ln -sf $PREFIX/glibc/opt/scripts/emuinabox $PREFIX/bin/emuinabox
+echo "To start - type \"emuinabox\""
+
+# Ajay Mobox Patch v1.1 Installation
+echo "Installing Ajay Mobox Patch v1.1"
+cd ~/storage/shared
+wget https://github.com/ajay9634/mobox_patch/releases/download/1.1/Ajay.mobox.patch.v1.1.7z
+7z x Ajay.mobox.patch.v1.1.7z -o~/emuinabox_patch
+cd ~/emuinabox_patch
+./install.bat
