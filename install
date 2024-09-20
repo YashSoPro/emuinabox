@@ -1,42 +1,65 @@
 #!/bin/bash
 
-rm ~/x
+# Function to check if a command exists
+command_exists () {
+    type "$1" &> /dev/null ;
+}
 
-echo "Installing termux-am"
-pkg install termux-am -y &>/dev/null
+# Function to install a package if it's not already installed
+install_if_not_exists () {
+    if ! command_exists $1; then
+        echo "Installing $1..."
+        pkg install $1 -y
+    fi
+}
 
-termux-setup-storage & sleep 4 &>/dev/null
+echo "Setting up EmuInABox environment..."
 
+# Ensure required packages are installed
+install_if_not_exists termux-am
+install_if_not_exists pulseaudio
+install_if_not_exists xwayland
+install_if_not_exists wget
+install_if_not_exists tsu
+install_if_not_exists patchelf
+install_if_not_exists p7zip
+install_if_not_exists xorg-xrandr
+install_if_not_exists ncurses-utils
+install_if_not_exists hashdeep
+install_if_not_exists termux-x11-nightly
+install_if_not_exists xorg-server
+install_if_not_exists xorg-xhost
+install_if_not_exists mesa
+install_if_not_exists i3
+install_if_not_exists gtk3
+install_if_not_exists xterm
+install_if_not_exists pcmanfm
+install_if_not_exists htop
+install_if_not_exists pavucontrol
+install_if_not_exists zenity
+install_if_not_exists geany
+install_if_not_exists winetricks
+
+# Set up storage access
+termux-setup-storage
+
+# Wait for storage permissions
 while true; do
     if [ -d ~/storage/shared ]; then
         break
     else
-        echo "Storage permission denied"
+        echo "Waiting for storage permission..."
     fi
     sleep 3
 done
 
-echo "Installing termux packages"
-apt-get clean
-apt-get update >/dev/null 2>&1
-apt-get -y --with-new-pkgs -o Dpkg::Options::="--force-confdef" upgrade >/dev/null 2>&1
-pkg install x11-repo -y &>/dev/null
-pkg install pulseaudio -y &>/dev/null
-pkg install xwayland -y &>/dev/null
-pkg install wget -y &>/dev/null
-pkg install tsu -y &>/dev/null
-pkg install root-repo -y &>/dev/null
-pkg install patchelf -y &>/dev/null
-pkg install p7zip -y &>/dev/null
-pkg install xorg-xrandr -y &>/dev/null
-pkg install ncurses-utils -y &>/dev/null
-pkg install hashdeep -y &>/dev/null
-pkg install termux-x11-nightly -y &>/dev/null
+echo "Storage permission granted."
 
-# New UI-related packages
-echo "Installing UI enhancement packages"
-pkg install xorg-server xorg-xhost mesa i3 gtk3 xterm pcmanfm htop pavucontrol ttf-dejavu arc-theme zenity geany winetricks -y &>/dev/null
+# Update and upgrade packages
+echo "Updating and upgrading packages..."
+apt update && apt upgrade -y
 
+# Install glibc
 if [ -e $PREFIX/glibc ]; then
     echo -n "Removing previous glibc. Continue? (Y/n) "
     read i
@@ -47,82 +70,100 @@ if [ -e $PREFIX/glibc ]; then
     fi
 fi
 
-INSTALL_WOW64=0
-
-echo "Select an option"
-echo "1) Install previous emuinabox with box86"
-echo "2) Install new emuinabox wow64 version"
-echo ""
-echo -n "Selected number: "
-read i
-case "$i" in
-1)
-    INSTALL_WOW64=0
-;;
-2)
-    INSTALL_WOW64=1
-;;
-*)
-    exit 1
-;;
-esac
-
-echo "Installing emuinabox"
-
-function wget-git-q {
-    wget -q --retry-connrefused --tries=0 --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/$1/raw?ref=main" -O $2
-    return $?
-}
-
-echo "Updating package manager"
+echo "Installing glibc..."
 mkdir -p $PREFIX/glibc/opt/package-manager/installed
 
-if [ "$INSTALL_WOW64" = "1" ]; then
+# Set up package manager
 echo "PRIVATE_TOKEN=glpat-h5r7HjKoPKZPxmfg79xs
-PROJECT_ID=54240888">$PREFIX/glibc/opt/package-manager/token
-else
-echo "PRIVATE_TOKEN=glpat-Xs4HfrCkMpbedkPycqzP
-PROJECT_ID=52465323">$PREFIX/glibc/opt/package-manager/token
-fi
+PROJECT_ID=54240888" > $PREFIX/glibc/opt/package-manager/token
 
 . $PREFIX/glibc/opt/package-manager/token
-if ! wget-git-q "package-manager" "$PREFIX/glibc/opt/package-manager/package-manager"; then
-    echo "Download failed"
+
+wget -q --retry-connrefused --tries=0 --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/package-manager/raw?ref=main" -O $PREFIX/glibc/opt/package-manager/package-manager
+
+if [ $? -ne 0 ]; then
+    echo "Failed to download package manager. Please check your internet connection and try again."
     exit 1
 fi
+
 . $PREFIX/glibc/opt/package-manager/package-manager
 sync-all
 
-if [ "$INSTALL_WOW64" = "1" ]; then
+echo "Installing Wine..."
 sync-package wine-9.3-vanilla-wow64
+
+# Create combined emuinabox script
+cat > $PREFIX/bin/emuinabox << EOL
+#!/bin/bash
+
+# Function to check if a command exists
+command_exists () {
+    type "\$1" &> /dev/null ;
+}
+
+# Check if we're in a graphical environment
+if [ -n "\$DISPLAY" ]; then
+    # We're in a graphical environment, start the UI version
+    if command_exists i3; then
+        i3 &
+    else
+        echo "i3 not found. Continuing without window manager."
+    fi
+
+    sleep 2
+
+    if command_exists xterm; then
+        xterm &
+    else
+        echo "xterm not found. Continuing without terminal emulator."
+    fi
 else
-sync-package wine-ge-custom-8-25
+    # We're not in a graphical environment, start Xwayland
+    if command_exists Xwayland; then
+        Xwayland :0 &
+        export DISPLAY=:0
+        
+        if command_exists i3; then
+            i3 &
+        else
+            echo "i3 not found. Continuing without window manager."
+        fi
+
+        sleep 2
+
+        if command_exists xterm; then
+            xterm &
+        else
+            echo "xterm not found. Continuing without terminal emulator."
+        fi
+    else
+        echo "Xwayland not found. Running in non-graphical mode."
+    fi
 fi
 
-ln -sf $PREFIX/glibc/opt/scripts/emuinabox $PREFIX/bin/emuinabox
-
-# Create a startup script for the UI
-cat > $PREFIX/bin/start-emuinabox-ui << EOL
-#!/bin/bash
-# Start X server
-Xwayland :0 &
-export DISPLAY=:0
-
-# Start window manager (i3 in this case)
-i3 &
-
-# Wait a bit for the window manager to start
-sleep 2
-
-# Start a terminal emulator
-xterm &
-
-# Start Wine
-emuinabox
+# Start the actual emuinabox environment
+if [ -f $PREFIX/glibc/opt/scripts/emuinabox ]; then
+    $PREFIX/glibc/opt/scripts/emuinabox
+else
+    echo "EmuInABox script not found. Please check your installation."
+    exit 1
+fi
 EOL
 
-chmod +x $PREFIX/bin/start-emuinabox-ui
+chmod +x $PREFIX/bin/emuinabox
+
+# Update PATH
+echo 'export PATH=$PATH:$PREFIX/bin' >> ~/.bashrc
+source ~/.bashrc
 
 echo "Setup complete!"
-echo "To start the basic Wine environment, type \"emuinabox\""
-echo "To start the enhanced UI environment, type \"start-emuinabox-ui\""
+echo "To start EmuInABox, simply type \"emuinabox\""
+echo "It will automatically detect whether you're in a graphical environment and start accordingly."
+
+# Print debug information
+echo "Debug Information:"
+echo "PATH: $PATH"
+echo "emuinabox location:"
+ls -l $PREFIX/bin/emuinabox
+echo "emuinabox script location:"
+ls -l $PREFIX/glibc/opt/scripts/emuinabox
