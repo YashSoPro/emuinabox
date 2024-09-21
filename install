@@ -59,6 +59,10 @@ function installation_notice {
 # Start the script
 rm ~/x
 
+# Install wget first
+echo -e "${YELLOW}Installing wget...${NC}"
+pkg install wget -y &>/dev/null && echo -e "${GREEN}Installed wget successfully${NC}" || echo -e "${RED}Failed to install wget${NC}"
+
 # Install termux-am
 installation_notice
 install_package termux-am
@@ -88,7 +92,6 @@ apt-get -y --with-new-pkgs -o Dpkg::Options::="--force-confdef" upgrade >/dev/nu
 install_package x11-repo
 install_package pulseaudio
 install_package xwayland
-install_package wget
 install_package tsu
 install_package root-repo
 install_package patchelf
@@ -182,4 +185,4 @@ echo -e "${GREEN}Emuinabox installed. To start, type 'emuinabox'${NC}"
 
 # Add $PREFIX/bin to PATH
 export PATH=$PREFIX/bin:$PATH
-echo -e "${GREEN} PATH updated. You can now run 'emuinabox' successfully.${NC}"
+echo -e "${GREEN} PATH updated. You can now run 'emuinabox' successfully.${ NC}"
