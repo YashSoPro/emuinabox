@@ -1,168 +1,110 @@
 #!/bin/bash
 
-# Function to print the progress bar
-progress_bar() {
-    local width=50  # Width of the progress bar
-    local percent=$(($1 * 100 / $2))
-    local filled=$((percent * width / 100))
-    local empty=$((width - filled))
+# ASCII art header
+echo -e "\033[1;33m"
+cat << "EOF"
+___________            __________              
+\_   _____/ _____  __ _\______   \ _______  ___
+ |    __)_ /     \|  |  \    |  _//  _ \  \/  /
+ |        \  Y Y  \  |  /    |   (  <_> >    < 
+/_______  /__|_|  /____/|______  /\____/__/\_ \
+        \/      \/             \/             \/ 
+EOF
+echo -e "\033[0m"
 
-    # Print progress bar
-    printf "\r["
-    for ((i=0; i<filled; i++)); do printf "#"; done
-    for ((i=0; i<empty; i++)); do printf "-"; done
-    printf "] %d%%" "$percent"
+# Clean any previous setup
+rm -f ~/x
+
+# Function to install packages
+install_packages() {
+    echo "Installing packages: $@"
+    pkg install -y "$@"
 }
 
-# ASCII Art - Emu in a Box
-ascii_art() {
-    echo -e "\e[34m"
-    echo " ___________            __________              "
-    echo "\_   _____/ _____  __ _\______   \ _______  ___"
-    echo " |    __)_ /     \|  |  \    |  _//  _ \  \/  /"
-    echo " |        \  Y Y  \  |  /    |   (  <_> >    < "
-    echo "/_______  /__|_|  /____/|______  /\____/__/\_ \\"
-    echo "        \/      \/             \/             \/ "
-    echo -e "\e[0m"
-}
+# Install essential packages
+install_packages termux-am x11-repo pulseaudio xwayland wget tsu root-repo patchelf p7zip xorg-xrandr ncurses-utils hashdeep termux-x11-nightly
 
-# Display the ASCII art
-ascii_art
-
-# Remove old x file if exists
-rm ~/x
-
-# Install termux-am
-echo "Installing termux-am..."
-pkg install termux-am -y
-
-# Setting up Termux storage
-termux-setup-storage & sleep 4
-
-while true; do
-    if [ -d ~/storage/shared ]; then
-        echo "Storage permission granted!"
-        break
-    else
-        echo "Storage permission denied!"
-    fi
-    sleep 3
+# Set up storage permissions
+termux-setup-storage & 
+timeout=30
+while [ $timeout -gt 0 ] && [ ! -d ~/storage/shared ]; do
+    echo "Waiting for storage permission... ($timeout seconds left)"
+    sleep 1
+    ((timeout--))
 done
 
-# Clean and install all required dependencies
-echo "Cleaning and updating package repository..."
+if [ ! -d ~/storage/shared ]; then
+    echo "Storage permission denied. Exiting."
+    exit 1
+fi
+
+# Update and upgrade packages
+echo "Updating and upgrading packages"
 apt-get clean
-apt-get update >/dev/null
+apt-get update -y >/dev/null
 apt-get -y --with-new-pkgs -o Dpkg::Options::="--force-confdef" upgrade >/dev/null
 
-# Package list
-packages=(
-    "x11-repo"
-    "pulseaudio"
-    "xwayland"
-    "wget"
-    "tsu"
-    "root-repo"
-    "patchelf"
-    "p7zip"
-    "xorg-xrandr"
-    "ncurses-utils"
-    "hashdeep"
-    "termux-x11-nightly"
-)
-
-# Install packages with a progress bar
-total_packages=${#packages[@]}
-completed=0
-
-echo "Installing required packages..."
-
-for package in "${packages[@]}"; do
-    pkg install "$package" -y >/dev/null 2>&1
-    ((completed++))
-    progress_bar $completed $total_packages
-done
-
-echo -e "\nAll required packages installed successfully!"
-
-# Remove previous glibc
+# Remove previous glibc if present
 if [ -e $PREFIX/glibc ]; then
-    echo -n "Removing previous glibc. Continue? (Y/n) "
-    read i
-    if [ "$i" = "Y" ] || [ "$i" = "y" ]; then
+    read -p "Removing previous glibc. Continue? (Y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
         rm -rf $PREFIX/glibc
-        echo "Previous glibc removed!"
     else
-        echo "Glbc removal skipped!"
-        return 1
+        echo "Operation cancelled."
+        exit 1
     fi
 fi
 
-# Select between WOW64 or Wine-ge
-INSTALL_WOW64=0
+# Select installation option
+echo "Select an option:"
+echo "1) Install previous emuinabox with box86"
+echo "2) Install new emuinabox wow64 version"
+read -p "Selected number: " option
 
-echo "Select an option"
-echo "1) Install previous mobox with box86"
-echo "2) Install new mobox wow64 version"
-echo ""
-echo -n "Selected number: "
-read i
-case "$i" in
-1)
-    INSTALL_WOW64=0
-;;
-2)
-    INSTALL_WOW64=1
-;;
-*)
-    return 1
-;;
+case $option in
+    1) INSTALL_WOW64=0 ;;
+    2) INSTALL_WOW64=1 ;;
+    *) echo "Invalid option. Exiting."; exit 1 ;;
 esac
 
-echo "Installing mobox..."
-
-# Update wget source to use your GitHub repo
-wget https://github.com/YashSoPro/emuinabox_packages -O /data/data/com.termux/files/home/emuinabox_packages
+# Installing emuinabox
+echo "Installing emuinabox"
 
 # Create required directory
 mkdir -p $PREFIX/glibc/opt/package-manager/installed
 
-# Set private token and project id based on selection
+# Set the private token and project id
 if [ "$INSTALL_WOW64" = "1" ]; then
     echo "PRIVATE_TOKEN=glpat-h5r7HjKoPKZPxmfg79xs
-    PROJECT_ID=54240888">$PREFIX/glibc/opt/package-manager/token
+PROJECT_ID=54240888" > $PREFIX/glibc/opt/package-manager/token
 else
     echo "PRIVATE_TOKEN=glpat-Xs4HfrCkMpbedkPycqzP
-    PROJECT_ID=52465323">$PREFIX/glibc/opt/package-manager/token
+PROJECT_ID=52465323" > $PREFIX/glibc/opt/package-manager/token
 fi
 
-# Load the private token and project ID into the session
-. $PREFIX/glibc/opt/package-manager/token
+# Load token
+source $PREFIX/glibc/opt/package-manager/token
 
-# Download the package manager script
-if [ "$INSTALL_WOW64" = "1" ]; then
-    curl https://raw.githubusercontent.com/EDLLT/mobox/main/package-manager -o "$PREFIX/glibc/opt/package-manager/package-manager"
-else
-    wget https://github.com/YashSoPro/emuinabox_packages -O "$PREFIX/glibc/opt/package-manager/package-manager"
-fi
+# Download and install package-manager script
+curl -sSL https://raw.githubusercontent.com/YashSoPro/emuinabox_packages/main/package-manager -o "$PREFIX/glibc/opt/package-manager/package-manager"
 
-# Execute the package manager script
-. $PREFIX/glibc/opt/package-manager/package-manager
+# Execute the package manager to set up everything emuinabox-related
+source $PREFIX/glibc/opt/package-manager/package-manager
 
-# Sync everything mobox related
-sync-all
-
-# Install wine based on selection
+# Install Wine
 if [ "$INSTALL_WOW64" = "1" ]; then
     sync-package wine-9.3-vanilla-wow64
 else
     sync-package wine-ge-custom-8-25
 fi
 
-# Create a symlink for mobox
+# Create symlinks for both 'emuinabox' and 'mobox'
+ln -sf $PREFIX/glibc/opt/scripts/mobox $PREFIX/bin/emuinabox
 ln -sf $PREFIX/glibc/opt/scripts/mobox $PREFIX/bin/mobox
 
-echo "--------------------------------------------------"
-echo "Mobox installation complete!"
-echo "To start, type 'mobox'!"
-echo "--------------------------------------------------"
+# Completion message
+echo -e "\033[1;32m--------------------------------------------------"
+echo "Emuinabox installation complete!"
+echo "To start, type 'emuinabox'!"
+echo -e "--------------------------------------------------\033[0m"
