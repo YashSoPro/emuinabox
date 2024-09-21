@@ -108,5 +108,5 @@ else
 fi
 
 # Create a symlink for emuinabox
-ln -sf $PREFIX/glibc/opt/scripts/emuinabox $PREFIX/bin/emuinabox
+ln -sf $PREFIX/glibc/opt/scripts/mobox $PREFIX/bin/emuinabox
 echo "To start - type \"emuinabox\""
