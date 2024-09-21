@@ -138,9 +138,9 @@ while true; do
     esac
 done
 
-# Function to download from Git with retries
-function wget_git_q {
-    wget -q --retry-connrefused --tries=0 --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects/$PROJECT_ID/repository/files/$1/raw?ref=main" -O "$2"
+# Function to download from GitHub with retries
+function wget_github {
+    wget -q --retry-connrefused --tries=0 "https://raw.githubusercontent.com/YashSoPro/emuinabox_packages/main/$1" -O "$2"
     return $?
 }
 
@@ -148,20 +148,13 @@ function wget_git_q {
 echo -e "${BLUE}Installing EmuBox...${NC}"
 mkdir -p "$PREFIX/glibc/opt/package-manager/installed"
 
-if [ "$INSTALL_WOW64" = "1" ]; then
-    echo "PRIVATE_TOKEN=glpat-h5r7HjKoPKZPxmfg79xs" > "$PREFIX/glibc/opt/package-manager/token"
-    echo "PROJECT_ID=54240888" >> "$PREFIX/glibc/opt/package-manager/token"
-else
-    echo "PRIVATE_TOKEN=glpat-Xs4HfrCkMpbedkPycqzP" > "$PREFIX/glibc/opt/package-manager/token"
-    echo "PROJECT_ID=52465323" >> "$PREFIX/glibc/opt/package-manager/token"
-fi
-
-# Load tokens and package manager
-source "$PREFIX/glibc/opt/package-manager/token"
-if ! wget_git_q "package-manager" "$PREFIX/glibc/opt/package-manager/package-manager"; then
+# Download the package-manager script
+if ! wget_github "package-manager" "$PREFIX/glibc/opt/package-manager/package-manager"; then
     echo -e "${RED}Download failed${NC}"
     exit 1
 fi
+
+# Load the package manager script
 source "$PREFIX/glibc/opt/package-manager/package-manager"
 
 # Synchronize and install Wine packages
@@ -174,4 +167,4 @@ fi
 
 # Create a symbolic link to start the program by typing "emu-in-a-box"
 ln -sf "$PREFIX/glibc/opt/scripts/mobox" "$PREFIX/bin/emuinabox"
-echo -e "${GREEN}Installation complete! To start EmuBox, type \"emuinabox\"${NC}"
+echo -e "${GREEN}Installation complete! To start emuinabox, type \"emuinabox\"${NC}"
