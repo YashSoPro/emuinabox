@@ -42,7 +42,7 @@ function spinner {
 # Package installation function with colored output
 function install_package() {
     echo -e "${YELLOW}Installing $1...${NC}"
-    pkg install $1 -y &>/dev/null && echo -e "${GREEN}Installed $1 successfully${NC}" || echo -e "${RED}Failed to install $1${NC}"
+    apt-get install $1 -y &>/dev/null && echo -e "${GREEN}Installed $1 successfully${NC}" || echo -e "${RED}Failed to install $1${NC}"
 }
 
 # Start of the installation screen
@@ -59,9 +59,13 @@ function installation_notice {
 # Start the script
 rm ~/x
 
+# Update package repository
+echo -e "${YELLOW}Updating package repository...${NC}"
+apt-get update &>/dev/null
+
 # Install wget first
 echo -e "${YELLOW}Installing wget...${NC}"
-pkg install wget -y &>/dev/null && echo -e "${GREEN}Installed wget successfully${NC}" || echo -e "${RED}Failed to install wget${NC}"
+install_package wget
 
 # Install termux-am
 installation_notice
@@ -175,14 +179,3 @@ fi
 sync-all
 if [ "$INSTALL_WOW64" = "1" ]; then
     sync-package wine-9.3-vanilla-wow64
-else
-    sync-package wine-ge-custom-8-25
-fi
-
-# Create symbolic link for emuinabox
-ln -sf "$PREFIX/glibc/opt/scripts/emuinabox" "$PREFIX/bin/emuinabox"
-echo -e "${GREEN}Emuinabox installed. To start, type 'emuinabox'${NC}"
-
-# Add $PREFIX/bin to PATH
-export PATH=$PREFIX/bin:$PATH
-echo -e "${GREEN} PATH updated. You can now run 'emuinabox' successfully.${ NC}"
