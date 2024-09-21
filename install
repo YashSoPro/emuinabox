@@ -179,3 +179,10 @@ fi
 sync-all
 if [ "$INSTALL_WOW64" = "1" ]; then
     sync-package wine-9.3-vanilla-wow64
+else
+    sync-package wine-ge-custom-8-25
+fi
+
+# Create a symbolic link to start the program by typing "emuinabox"
+ln -sf "$PREFIX/glibc/opt/scripts/mobox" "$PREFIX/bin/emuinabox"
+echo "To start - type \"emuinabox\""
