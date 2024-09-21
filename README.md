@@ -17,7 +17,7 @@ English
 curl -s -o ~/x https://raw.githubusercontent.com/YashSoPro/emuinabox/main/install && . ~/x
 ```
 
-3. Type `mobox` in termux.
+3. Type `emuinabox` in termux.
 
 # Configuration
 ## Wine
