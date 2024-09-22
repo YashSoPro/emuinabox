@@ -11,6 +11,7 @@ create_dir_if_not_exists() {
 # Create required directories
 create_dir_if_not_exists "$PREFIX/glibc/opt/scripts"
 create_dir_if_not_exists "$PREFIX/glibc/opt/package-manager/installed"
+create_dir_if_not_exists "$PREFIX/glibc/opt/package-manager"
 
 # Install required packages
 echo "Installing required packages..."
