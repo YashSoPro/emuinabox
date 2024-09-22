@@ -94,9 +94,9 @@ fi
 # Downloads the package-manager script
 
 if [ "$INSTALL_WOW64" = "1" ]; then
-    curl https://raw.githubusercontent.com/YashSoPro/mobox/main/package-manager -o "$PREFIX/glibc/opt/package-manager/package-manager"
+    curl https://raw.githubusercontent.com/YashSoPro/emuinabox/main/package-manager -o "$PREFIX/glibc/opt/package-manager/package-manager"
 else
-    curl https://raw.githubusercontent.com/YashSoPro/mobox/main/package-manager -o "$PREFIX/glibc/opt/package-manager/package-manager"
+    curl https://raw.githubusercontent.com/YashSoPro/emuinabox/main/package-manager -o "$PREFIX/glibc/opt/package-manager/package-manager"
 fi
 
 # Executes the package manager script which sets up everything mobox related
