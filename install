@@ -58,7 +58,7 @@ INSTALL_WOW64=0
 
 echo "Select an option"
 echo "1) Install previous mobox with box86"
-echo "2) Install new mobox wow64 version"
+echo "2) Install new emuinabox wow64 version"
 echo ""
 echo -n "Selected number: "
 read i
@@ -74,7 +74,7 @@ case "$i" in
 ;;
 esac
 
-echo "Installing mobox"
+echo "Installing emuinabox"
 
 # Create the following directory(It doesn't exist since we'd removed glibc earlier)
 mkdir -p $PREFIX/glibc/opt/package-manager/installed
@@ -92,17 +92,16 @@ fi
 . $PREFIX/glibc/opt/package-manager/token
 
 # Downloads the package-manager script
-
 if [ "$INSTALL_WOW64" = "1" ]; then
     curl https://raw.githubusercontent.com/YashSoPro/emuinabox/main/package-manager -o "$PREFIX/glibc/opt/package-manager/package-manager"
 else
     curl https://raw.githubusercontent.com/YashSoPro/emuinabox/main/package-manager -o "$PREFIX/glibc/opt/package-manager/package-manager"
 fi
 
-# Executes the package manager script which sets up everything mobox related
+# Executes the package manager script which sets up everything emuinabox related
 . $PREFIX/glibc/opt/package-manager/package-manager
 
-# This is what installs everything mobox needs(base packages and wine)
+# This is what installs everything emuinabox needs (base packages and wine)
 sync-all
 
 # Installs wine
@@ -112,6 +111,18 @@ else
     sync-package wine-ge-custom-8-25
 fi
 
-# Create a symlink for mobox
-ln -sf $PREFIX/glibc/opt/scripts/emuinabox $PREFIX/bin/emuinabox
+# Ensure proper symlink creation for emuinabox
+if [ -e $PREFIX/glibc/opt/scripts/emuinabox ]; then
+    ln -sf $PREFIX/glibc/opt/scripts/emuinabox $PREFIX/bin/emuinabox
+else
+    echo "emuinabox script not found. Please check installation."
+fi
+
+# Ensure $PREFIX/bin is in PATH
+if [[ ":$PATH:" != *":$PREFIX/bin:"* ]]; then
+    export PATH=$PATH:$PREFIX/bin
+    echo 'export PATH=$PATH:$PREFIX/bin' >> ~/.bashrc
+    echo "Updated PATH to include $PREFIX/bin"
+fi
+
 echo "To start - type \"emuinabox\""
