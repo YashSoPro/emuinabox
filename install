@@ -72,7 +72,6 @@ echo "Updating package manager"
 
 mkdir -p $PREFIX/glibc/opt/package-manager/installed
 
-# Depending on what we selected earlier, set the private token and project id
 if [ "$INSTALL_WOW64" = "1" ]; then
     echo "PRIVATE_TOKEN=glpat-h5r7HjKoPKZPxmfg79xs
     PROJECT_ID=54240888">$PREFIX/glibc/opt/package-manager/token
@@ -84,11 +83,7 @@ fi
 . $PREFIX/glibc/opt/package-manager/token
 
 # Use your repo's package manager
-if [ "$INSTALL_WOW64" = "1" ]; then
-    curl https://raw.githubusercontent.com/YashSoPro/emuinabox_packages/main/package-manager -o "$PREFIX/glibc/opt/package-manager/package-manager"
-else
-    curl https://raw.githubusercontent.com/YashSoPro/emuinabox_packages/main/package-manager -o "$PREFIX/glibc/opt/package-manager/package-manager"
-fi
+curl -L https://raw.githubusercontent.com/YashSoPro/emuinabox_packages/main/package-manager -o "$PREFIX/glibc/opt/package-manager/package-manager"
 
 . $PREFIX/glibc/opt/package-manager/package-manager
 
@@ -101,5 +96,9 @@ else
 fi
 
 # Create a symlink for emuinabox
-ln -sf $PREFIX/glibc/opt/scripts/emuinabox_packages $PREFIX/bin/emuinabox
-echo "To start - type \"emuinabox\""
+if [ -f "$PREFIX/glibc/opt/scripts/mobox" ]; then
+    ln -sf "$PREFIX/glibc/opt/scripts/mobox" "$PREFIX/bin/emuinabox"
+    echo "To start - type \"emuinabox\""
+else
+    echo "Error: emuinabox script not found. Check the installation."
+fi
