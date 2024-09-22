@@ -103,9 +103,12 @@ else
     sync-package wine-ge-custom-8-25
 fi
 
-# Create a symlink for mobox if it doesn't exist
-if [ ! -e $PREFIX/bin/emuinabox ]; then
-    ln -sf $PREFIX/glibc/opt/scripts/mobox/mobox $PREFIX/bin/emuinabox
+# Check if the mobox folder exists and create a symlink
+if [ -d "$PREFIX/glibc/opt/scripts/mobox" ]; then
+    ln -sf "$PREFIX/glibc/opt/scripts/mobox/mobox" "$PREFIX/bin/emuinabox"
+else
+    echo "Error: mobox directory does not exist."
+    exit 1
 fi
 
 echo "To start - type \"emuinabox\""
